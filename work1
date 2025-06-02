@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000000;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .calculator {
+            width: 400px;
+            height: 700px;
+            background-color: #000000;
+            border-radius: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .display {
+            width: 100%;
+            height: 120px;
+            background-color: #000000;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .display-text {
+            color: white;
+            font-size: 48px;
+            font-weight: normal;
+            word-break: break-all;
+            text-align: right;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .button {
+            width: 70px;
+            height: 70px;
+            border: none;
+            border-radius: 35px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: opacity 0.1s;
+        }
+
+        .button:active {
+            opacity: 0.7;
+        }
+
+        .button-number {
+            background-color: #333333;
+            color: white;
+        }
+
+        .button-operator {
+            background-color: #ff9500;
+            color: white;
+        }
+
+        .button-function {
+            background-color: #a6a6a6;
+            color: black;
+        }
+
+        .button-zero {
+            width: 155px;
+            grid-column: span 2;
+        }
+
+        .secret-menu {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 50px;
+        }
+
+        .secret-title {
+            color: white;
+            font-size: 32px;
+        }
+
+        .back-button {
+            width: 120px;
+            height: 50px;
+            background-color: #ff9500;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: opacity 0.1s;
+        }
+
+        .back-button:active {
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div id="calculatorView">
+            <div class="display">
+                <div id="displayText" class="display-text">0</div>
+            </div>
+
+            <div class="button-grid">
+                <button class="button button-function" onclick="clearAll()">AC</button>
+                <button class="button button-function" onclick="toggleSign()">+/-</button>
+                <button class="button button-function" onclick="percentage()">%</button>
+                <button class="button button-operator" onclick="setOperator('÷')">÷</button>
+
+                <button class="button button-number" onclick="inputNumber('7')">7</button>
+                <button class="button button-number" onclick="inputNumber('8')">8</button>
+                <button class="button button-number" onclick="inputNumber('9')">9</button>
+                <button class="button button-operator" onclick="setOperator('×')">×</button>
+
+                <button class="button button-number" onclick="inputNumber('4')">4</button>
+                <button class="button button-number" onclick="inputNumber('5')">5</button>
+                <button class="button button-number" onclick="inputNumber('6')">6</button>
+                <button class="button button-operator" onclick="setOperator('-')">-</button>
+
+                <button class="button button-number" onclick="inputNumber('1')">1</button>
+                <button class="button button-number" onclick="inputNumber('2')">2</button>
+                <button class="button button-number" onclick="inputNumber('3')">3</button>
+                <button class="button button-operator" onclick="setOperator('+')">+</button>
+
+                <button class="button button-number button-zero" onclick="inputNumber('0')">0</button>
+                <button class="button button-number" onclick="inputDecimal()">.</button>
+                <button id="equalsButton" class="button button-operator" onclick="calculate()" onmousedown="startLongPress()" onmouseup="stopLongPress()" onmouseleave="stopLongPress()" ontouchstart="startLongPress()" ontouchend="stopLongPress()">=</button>
+            </div>
+        </div>
+
+        <div id="secretMenuView" class="secret-menu">
+            <div class="secret-title">Секретное меню</div>
+            <button class="back-button" onclick="goBack()">Назад</button>
+        </div>
+    </div>
+
+    <script>
+        let currentInput = "0";
+        let previousInput = "";
+        let operator = "";
+        let shouldResetDisplay = false;
+        let isSecretMode = false;
+        let secretSequence = "";
+        let longPressTimer = null;
+        let secretTimer = null;
+
+        function updateDisplay() {
+            let displayValue = currentInput;
+            if (displayValue.length > 12) {
+                let fontSize = Math.max(20, 48 - (displayValue.length - 12) * 2);
+                document.getElementById('displayText').style.fontSize = fontSize + 'px';
+            } else {
+                document.getElementById('displayText').style.fontSize = '48px';
+            }
+            document.getElementById('displayText').textContent = displayValue;
+        }
+
+        function inputNumber(num) {
+            if (isSecretMode) {
+                secretSequence += num;
+                if (secretSequence === "123") {
+                    showSecretMenu();
+                    return;
+                }
+                if (secretSequence.length >= 3) {
+                    resetSecretMode();
+                }
+                return;
+            }
+
+            if (shouldResetDisplay) {
+                currentInput = "";
+                shouldResetDisplay = false;
+            }
+            
+            if (currentInput === "0") {
+                currentInput = num;
+            } else if (currentInput.length < 25) {
+                currentInput += num;
+            }
+            updateDisplay();
+        }
+
+        function inputDecimal() {
+            if (isSecretMode) return;
+            
+            if (shouldResetDisplay) {
+                currentInput = "0";
+                shouldResetDisplay = false;
+            }
+            
+            if (currentInput.indexOf(".") === -1 && currentInput.length < 24) {
+                currentInput += ".";
+                updateDisplay();
+            }
+        }
+
+        function setOperator(op) {
+            if (isSecretMode) return;
+            
+            if (operator !== "" && !shouldResetDisplay) {
+                calculate();
+            }
+            
+            previousInput = currentInput;
+            operator = op;
+            shouldResetDisplay = true;
+        }
+
+        function calculate() {
+            if (isSecretMode) return;
+            
+            if (operator !== "" && previousInput !== "" && !shouldResetDisplay) {
+                let prev = parseFloat(previousInput);
+                let current = parseFloat(currentInput);
+                let result;
+
+                switch (operator) {
+                    case "+":
+                        result = prev + current;
+                        break;
+                    case "-":
+                        result = prev - current;
+                        break;
+                    case "×":
+                        result = prev * current;
+                        break;
+                    case "÷":
+                        if (current === 0) {
+                            currentInput = "Error";
+                            operator = "";
+                            previousInput = "";
+                            shouldResetDisplay = true;
+                            updateDisplay();
+                            return;
+                        }
+                        result = prev / current;
+                        break;
+                    default:
+                        return;
+                }
+
+                let resultStr = result.toString();
+                if (resultStr.length > 25) {
+                    if (Math.abs(result) >= 1e21 || (Math.abs(result) < 1e-6 && result !== 0)) {
+                        resultStr = result.toExponential(15);
+                    } else {
+                        resultStr = parseFloat(result.toPrecision(15)).toString();
+                    }
+                }
+                
+                currentInput = resultStr;
+                operator = "";
+                previousInput = "";
+                shouldResetDisplay = true;
+                updateDisplay();
+            }
+        }
+
+        function clearAll() {
+            if (isSecretMode) return;
+            
+            currentInput = "0";
+            previousInput = "";
+            operator = "";
+            shouldResetDisplay = false;
+            updateDisplay();
+        }
+
+        function toggleSign() {
+            if (isSecretMode) return;
+            
+            if (currentInput !== "0" && currentInput !== "Error") {
+                if (currentInput.charAt(0) === "-") {
+                    currentInput = currentInput.substring(1);
+                } else {
+                    currentInput = "-" + currentInput;
+                }
+                updateDisplay();
+            }
+        }
+
+        function percentage() {
+            if (isSecretMode) return;
+            
+            if (currentInput !== "Error") {
+                let result = parseFloat(currentInput) / 100;
+                let resultStr = result.toString();
+                if (resultStr.length > 25) {
+                    if (Math.abs(result) >= 1e21 || (Math.abs(result) < 1e-6 && result !== 0)) {
+                        resultStr = result.toExponential(15);
+                    } else {
+                        resultStr = parseFloat(result.toPrecision(15)).toString();
+                    }
+                }
+                currentInput = resultStr;
+                updateDisplay();
+            }
+        }
+
+        function resetSecretMode() {
+            isSecretMode = false;
+            secretSequence = "";
+            if (secretTimer) {
+                clearTimeout(secretTimer);
+                secretTimer = null;
+            }
+        }
+
+        function showSecretMenu() {
+            document.getElementById('calculatorView').style.display = 'none';
+            document.getElementById('secretMenuView').style.display = 'flex';
+            resetSecretMode();
+        }
+
+        function goBack() {
+            document.getElementById('calculatorView').style.display = 'block';
+            document.getElementById('secretMenuView').style.display = 'none';
+        }
+
+        function startLongPress() {
+            longPressTimer = setTimeout(() => {
+                isSecretMode = true;
+                secretSequence = "";
+                secretTimer = setTimeout(() => {
+                    resetSecretMode();
+                }, 5000);
+            }, 4000);
+        }
+
+        function stopLongPress() {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>
